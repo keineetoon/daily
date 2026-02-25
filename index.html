@@ -2,30 +2,59 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Task Switch</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Daily Tasks</title>
     <style>
         :root {
-            --bg-color: #f6f8fa;
-            --toggle-on: #2da44e; /* GitHub風の緑 */
+            --bg-default: #f6f8fa;
+            --bg-active: #e7f3ff; /* オンにした時の背景色（薄い青） */
+            --toggle-on: #007bff; /* オン時のスイッチ色（青） */
             --toggle-off: #afb8c1;
         }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background-color: var(--bg-color); padding: 20px; color: #1f2328; }
-        .container { max-width: 400px; margin: 0 auto; background: white; padding: 24px; border-radius: 12px; border: 1px solid #d0d7de; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        h1 { font-size: 1.5rem; margin-bottom: 4px; text-align: center; }
+        
+        /* 画面全体のレイアウト：下寄せ */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-default);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end; /* 下に寄せる */
+            height: 100dvh; /* 動的な画面の高さに対応 */
+            transition: background-color 0.3s ease;
+        }
+
+        /* オン状態の時のボディ背景色 */
+        body.is-active {
+            background-color: var(--bg-active);
+        }
+
+        .container { 
+            background: white; 
+            padding: 24px 24px 40px 24px; /* 下側に余裕を持たせる */
+            border-radius: 24px 24px 0 0; /* 上側だけ丸める */
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        h1 { font-size: 1.4rem; margin-bottom: 4px; text-align: center; }
         .date { text-align: center; color: #656d76; margin-bottom: 24px; font-size: 0.9rem; }
         
-        .task-item { display: flex; align-items: center; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #d0d7de; }
+        .task-item { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; border-bottom: 1px solid #eee; }
         .task-item:last-child { border-bottom: none; }
-        .task-label { font-size: 1.1rem; font-weight: 500; flex-grow: 1; }
+        .task-label { font-size: 1.2rem; font-weight: 600; flex-grow: 1; }
 
-        /* トグルスイッチの見た目（GitHub Settings風） */
-        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        /* トグルスイッチを大きく(1.4倍程度) */
+        .switch { position: relative; display: inline-block; width: 60px; height: 34px; }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--toggle-off); transition: .3s; border-radius: 24px; }
-        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--toggle-off); transition: .3s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .3s; border-radius: 50%; }
+        
         input:checked + .slider { background-color: var(--toggle-on); }
-        input:checked + .slider:before { transform: translateX(20px); }
+        input:checked + .slider:before { transform: translateX(26px); }
     </style>
 </head>
 <body>
@@ -56,11 +85,14 @@
         const checkedTasks = JSON.parse(localStorage.getItem('checked_tasks')) || {};
         taskListElement.innerHTML = '';
 
+        let anyChecked = false;
+
         TASKS.forEach(task => {
             const isChecked = checkedTasks[task] || false;
+            if (isChecked) anyChecked = true;
+
             const item = document.createElement('div');
             item.className = 'task-item';
-            
             item.innerHTML = `
                 <span class="task-label">${task}</span>
                 <label class="switch">
@@ -70,24 +102,26 @@
             `;
             taskListElement.appendChild(item);
         });
+
+        // 一つでもチェックがあれば背景色を変えるクラスを付与
+        document.body.classList.toggle('is-active', anyChecked);
     }
 
-    // スイッチを切り替える時の処理
     window.handleToggle = function(event, task) {
         const isCurrentlyChecked = event.target.checked;
         let checkedTasks = JSON.parse(localStorage.getItem('checked_tasks')) || {};
 
         if (!isCurrentlyChecked) {
-            // オフにしようとした場合、確認を出す
             const confirmOff = confirm(`「${task}」をオフに戻しますか？`);
             if (!confirmOff) {
-                event.target.checked = true; // チェックを戻す
+                event.target.checked = true;
                 return;
             }
         }
 
         checkedTasks[task] = isCurrentlyChecked;
         localStorage.setItem('checked_tasks', JSON.stringify(checkedTasks));
+        renderTasks(); // 背景色反映のために再描画
     };
 
     init();
