@@ -3,51 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>毎日チェックリスト</title>
+    <title>Daily Task Switch</title>
     <style>
-        body { font-family: sans-serif; background-color: #f0f2f5; padding: 20px; }
-        .container { max-width: 400px; margin: 0 auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h1 { text-align: center; font-size: 1.2rem; color: #333; }
-        .date { text-align: center; color: #666; margin-bottom: 20px; font-size: 0.9rem; }
-        .task-item { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; }
+        :root {
+            --bg-color: #f6f8fa;
+            --toggle-on: #2da44e; /* GitHub風の緑 */
+            --toggle-off: #afb8c1;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background-color: var(--bg-color); padding: 20px; color: #1f2328; }
+        .container { max-width: 400px; margin: 0 auto; background: white; padding: 24px; border-radius: 12px; border: 1px solid #d0d7de; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        h1 { font-size: 1.5rem; margin-bottom: 4px; text-align: center; }
+        .date { text-align: center; color: #656d76; margin-bottom: 24px; font-size: 0.9rem; }
+        
+        .task-item { display: flex; align-items: center; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #d0d7de; }
         .task-item:last-child { border-bottom: none; }
-        input[type="checkbox"] { width: 25px; height: 25px; margin-right: 15px; cursor: pointer; }
-        span { font-size: 1.1rem; }
-        .completed span { text-decoration: line-through; color: #888; }
+        .task-label { font-size: 1.1rem; font-weight: 500; flex-grow: 1; }
+
+        /* トグルスイッチの見た目（GitHub Settings風） */
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--toggle-off); transition: .3s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        input:checked + .slider { background-color: var(--toggle-on); }
+        input:checked + .slider:before { transform: translateX(20px); }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1 id="title">毎日チェックリスト</h1>
+    <h1 id="title">Daily Tasks</h1>
     <div id="date-display" class="date"></div>
-    <div id="task-list">
-        </div>
+    <div id="task-list"></div>
 </div>
 
 <script>
-    // --- 【後で変更したい場合はここを書き換える】 ---
     const TASKS = ["シダキュア", "電気", "エアコン", "鍵"];
-    // ------------------------------------------
-
     const dateDisplay = document.getElementById('date-display');
     const taskListElement = document.getElementById('task-list');
-
-    // 今日が何日か取得 (YYYY-MM-DD)
     const today = new Date().toLocaleDateString('sv-SE'); 
 
     function init() {
-        dateDisplay.innerText = `${today} のタスク`;
-
-        // 保存された日付を確認
+        dateDisplay.innerText = `${today.replace(/-/g, '/')}`;
         const savedDate = localStorage.getItem('last_visit_date');
-
-        // もし保存された日付が今日と違う（＝次の日になった）ならデータを消す
         if (savedDate !== today) {
             localStorage.removeItem('checked_tasks');
             localStorage.setItem('last_visit_date', today);
         }
-
         renderTasks();
     }
 
@@ -57,26 +58,36 @@
 
         TASKS.forEach(task => {
             const isChecked = checkedTasks[task] || false;
-            const div = document.createElement('div');
-            div.className = `task-item ${isChecked ? 'completed' : ''}`;
-            div.innerHTML = `
-                <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleTask('${task}')">
-                <span>${task}</span>
+            const item = document.createElement('div');
+            item.className = 'task-item';
+            
+            item.innerHTML = `
+                <span class="task-label">${task}</span>
+                <label class="switch">
+                    <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="handleToggle(event, '${task}')">
+                    <span class="slider"></span>
+                </label>
             `;
-            div.onclick = (e) => {
-                if(e.target.tagName !== 'INPUT') {
-                    toggleTask(task);
-                }
-            };
-            taskListElement.appendChild(div);
+            taskListElement.appendChild(item);
         });
     }
 
-    window.toggleTask = function(task) {
+    // スイッチを切り替える時の処理
+    window.handleToggle = function(event, task) {
+        const isCurrentlyChecked = event.target.checked;
         let checkedTasks = JSON.parse(localStorage.getItem('checked_tasks')) || {};
-        checkedTasks[task] = !checkedTasks[task];
+
+        if (!isCurrentlyChecked) {
+            // オフにしようとした場合、確認を出す
+            const confirmOff = confirm(`「${task}」をオフに戻しますか？`);
+            if (!confirmOff) {
+                event.target.checked = true; // チェックを戻す
+                return;
+            }
+        }
+
+        checkedTasks[task] = isCurrentlyChecked;
         localStorage.setItem('checked_tasks', JSON.stringify(checkedTasks));
-        renderTasks();
     };
 
     init();
