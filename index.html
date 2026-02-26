@@ -7,7 +7,7 @@
     <style>
         :root {
             --bg-default: #f6f8fa;
-            --bg-active: #87CEEB; /* スカイブルーに変更 */
+            --bg-active: #87CEEB; 
             --toggle-on: #007bff;
             --toggle-off: #afb8c1;
         }
@@ -19,51 +19,47 @@
             display: flex;
             flex-direction: column;
             min-height: 100dvh;
-            transition: background-color 0.5s ease; /* 少しゆっくり色が変わるように */
+            transition: background-color 0.5s ease;
         }
 
-        /* 4つ全部チェックされた時の背景 */
-        body.is-complete {
-            background-color: var(--bg-active);
-        }
+        body.is-complete { background-color: var(--bg-active); }
 
-        .memo-container {
-            padding: 15px;
-            max-width: 600px;
-            width: 100%;
-            margin: 0 auto;
-            box-sizing: border-box;
-        }
-        #persistent-memo {
-            width: 100%;
-            height: 80px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 12px;
-            font-size: 0.9rem;
-            resize: none;
-            box-sizing: border-box;
-            background: #fff;
-        }
-
+        /* 上部の余白を大きく取り、コンテンツを下に押し下げる */
         .spacer { flex-grow: 1; }
 
         .container { 
             background: white; 
-            padding: 24px 24px 40px 24px;
-            border-radius: 24px 24px 0 0;
-            box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
+            padding: 24px 24px 30px 24px;
+            border-radius: 32px 32px 0 0; /* 角丸を少し強調 */
+            box-shadow: 0 -5px 25px rgba(0,0,0,0.08);
             max-width: 600px;
             margin: 0 auto;
             width: 100%;
             box-sizing: border-box;
         }
 
-        h1 { font-size: 1.4rem; margin-bottom: 4px; text-align: center; }
-        .date { text-align: center; color: #656d76; margin-bottom: 24px; font-size: 0.9rem; }
-        .task-item { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; border-bottom: 1px solid #eee; }
-        .task-item:last-child { border-bottom: none; }
-        .task-label { font-size: 1.2rem; font-weight: 600; flex-grow: 1; }
+        /* タイトル等も控えめにして下に寄せる */
+        .header-area { text-align: center; margin-bottom: 20px; }
+        h1 { font-size: 1.2rem; margin: 0 0 4px 0; color: #333; }
+        .date { color: #656d76; font-size: 0.85rem; }
+        
+        /* 親指が届きやすい位置のメモ欄 */
+        .memo-in-container { margin-bottom: 15px; }
+        #persistent-memo {
+            width: 100%;
+            height: 90px;
+            padding: 12px;
+            border: 1px solid #e1e4e8;
+            border-radius: 14px;
+            font-size: 1rem;
+            resize: none;
+            box-sizing: border-box;
+            background: #f8f9fa;
+            font-family: inherit;
+        }
+
+        .task-item { display: flex; align-items: center; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f0f0f0; }
+        .task-label { font-size: 1.1rem; font-weight: 600; flex-grow: 1; }
 
         .switch { position: relative; display: inline-block; width: 60px; height: 34px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -72,128 +68,163 @@
         input:checked + .slider { background-color: var(--toggle-on); }
         input:checked + .slider:before { transform: translateX(26px); }
 
-        .history-section {
-            margin-top: 20px;
-            font-size: 0.8rem;
-            color: #888;
-            border-top: 1px dashed #ddd;
-            padding-top: 15px;
+        /* 履歴ボタンも押しやすい位置に */
+        .btn-history {
+            display: block;
+            margin: 25px auto 5px;
+            padding: 12px 24px;
+            background: #f0f2f5;
+            border: none;
+            border-radius: 25px;
+            color: #555;
+            font-size: 0.85rem;
+            font-weight: 500;
         }
-        .history-item { margin-bottom: 4px; }
+
+        /* 履歴パネル（下からスライド） */
+        #history-panel {
+            position: fixed;
+            bottom: -100%;
+            left: 0;
+            right: 0;
+            background: #fff;
+            height: 80vh;
+            max-width: 600px;
+            margin: 0 auto;
+            transition: bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+            border-radius: 24px 24px 0 0;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.2);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+        #history-panel.open { bottom: 0; }
+        .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .history-content { overflow-y: auto; flex-grow: 1; }
+        .history-row { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid #f5f5f5; }
+
+        .congrats { text-align: center; color: #007bff; font-weight: bold; min-height: 1.4rem; margin-bottom: 5px; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
-<div class="memo-container">
-    <textarea id="persistent-memo" placeholder="消えないメモ欄..."></textarea>
+<div class="spacer"></div> <div class="container">
+    <div id="congrats-msg" class="congrats"></div>
+    
+    <div class="header-area">
+        <h1 id="title">Daily Tasks</h1>
+        <div id="date-display" class="date"></div>
+    </div>
+    
+    <div class="memo-in-container">
+        <textarea id="persistent-memo" placeholder="今日のメモ・記録..."></textarea>
+    </div>
+
+    <div id="task-list"></div>
+
+    <button class="btn-history" onclick="toggleHistory(true)">履歴を確認する</button>
 </div>
 
-<div class="spacer"></div>
-
-<div class="container">
-    <h1 id="title">Daily Tasks</h1>
-    <div id="date-display" class="date"></div>
-    <div id="task-list"></div>
-    <div id="history-list" class="history-section"></div>
+<div id="history-panel">
+    <div class="history-header">
+        <span style="font-weight: bold; font-size: 1.1rem;">過去30日の記録</span>
+        <button onclick="toggleHistory(false)" style="border:none; background:none; font-size:1.8rem; color:#ccc; padding:0 10px;">×</button>
+    </div>
+    <div class="history-content" id="history-list"></div>
 </div>
 
 <script>
     const TASKS = ["シダキュア", "電気", "エアコン", "鍵"];
-    const dateDisplay = document.getElementById('date-display');
-    const taskListElement = document.getElementById('task-list');
-    const memoElement = document.getElementById('persistent-memo');
-    const historyElement = document.getElementById('history-list');
     const today = new Date().toLocaleDateString('sv-SE'); 
 
     function init() {
-        dateDisplay.innerText = `${today.replace(/-/g, '/')}`;
-        memoElement.value = localStorage.getItem('persistent_memo') || "";
-        memoElement.addEventListener('input', (e) => {
-            localStorage.setItem('persistent_memo', e.target.value);
-        });
+        document.getElementById('date-display').innerText = `${today.replace(/-/g, '/')}`;
+        const memo = document.getElementById('persistent-memo');
+        memo.value = localStorage.getItem('persistent_memo') || "";
+        memo.addEventListener('input', (e) => localStorage.setItem('persistent_memo', e.target.value));
 
         const savedDate = localStorage.getItem('last_visit_date');
         if (savedDate && savedDate !== today) {
-            saveCurrentToHistory(savedDate);
+            saveToHistory(savedDate);
             localStorage.removeItem('checked_tasks');
         }
         localStorage.setItem('last_visit_date', today);
-
         renderTasks();
-        renderHistory();
     }
 
-    function saveCurrentToHistory(date) {
+    function saveToHistory(date) {
         const checkedTasks = JSON.parse(localStorage.getItem('checked_tasks')) || {};
         const history = JSON.parse(localStorage.getItem('task_history')) || {};
         history[date] = checkedTasks;
         const keys = Object.keys(history).sort().reverse();
-        const filteredHistory = {};
-        keys.slice(0, 7).forEach(k => filteredHistory[k] = history[k]);
-        localStorage.setItem('task_history', JSON.stringify(filteredHistory));
+        const filtered = {};
+        keys.slice(0, 30).forEach(k => filtered[k] = history[k]);
+        localStorage.setItem('task_history', JSON.stringify(filtered));
     }
 
     function renderTasks() {
+        const taskList = document.getElementById('task-list');
         const checkedTasks = JSON.parse(localStorage.getItem('checked_tasks')) || {};
-        taskListElement.innerHTML = '';
-        
-        // 全てチェックされているか確認するためのカウンタ
-        let checkedCount = 0;
-
+        taskList.innerHTML = '';
+        let count = 0;
         TASKS.forEach(task => {
-            const isChecked = checkedTasks[task] || false;
-            if (isChecked) checkedCount++;
-
+            if (checkedTasks[task]) count++;
             const item = document.createElement('div');
             item.className = 'task-item';
             item.innerHTML = `
                 <span class="task-label">${task}</span>
                 <label class="switch">
-                    <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="handleToggle(event, '${task}')">
+                    <input type="checkbox" ${checkedTasks[task] ? 'checked' : ''} onchange="handleToggle(event, '${task}')">
                     <span class="slider"></span>
                 </label>
             `;
-            taskListElement.appendChild(item);
+            taskList.appendChild(item);
         });
-
-        // 全てのタスク（TASKS.length）がチェックされていたらクラスを付与
-        const isAllComplete = checkedCount === TASKS.length;
-        document.body.classList.toggle('is-complete', isAllComplete);
+        const isAllDone = count === TASKS.length;
+        document.body.classList.toggle('is-complete', isAllDone);
+        document.getElementById('congrats-msg').innerText = isAllDone ? "✨ 全て完了！ゆっくり休みましょう ✨" : "";
     }
 
-    function renderHistory() {
-        const history = JSON.parse(localStorage.getItem('task_history')) || {};
-        const dates = Object.keys(history).sort().reverse();
-        if (dates.length === 0) return;
+    window.toggleHistory = function(show) {
+        const panel = document.getElementById('history-panel');
+        if (show) { renderHistoryList(); panel.classList.add('open'); }
+        else { panel.classList.remove('open'); }
+    }
 
-        let html = '<div style="margin-bottom:8px; font-weight:bold;">過去の履歴</div>';
-        dates.forEach(date => {
+    function renderHistoryList() {
+        const history = JSON.parse(localStorage.getItem('task_history')) || {};
+        const list = document.getElementById('history-list');
+        const dates = Object.keys(history).sort().reverse();
+        if (dates.length === 0) {
+            list.innerHTML = '<div style="text-align:center; color:#ccc; margin-top:40px;">履歴はまだありません</div>';
+            return;
+        }
+        list.innerHTML = dates.map(date => {
             const data = history[date];
-            const status = TASKS.map(t => data[t] ? '●' : '×').join(' ');
-            html += `<div class="history-item">${date.replace(/^\d{4}-/, '')}: ${status}</div>`;
-        });
-        historyElement.innerHTML = html;
+            const marks = TASKS.map(t => data[t] ? '●' : '×').join('');
+            const doneCount = TASKS.filter(t => data[t]).length;
+            return `
+                <div class="history-row">
+                    <span style="font-weight:600; color:#555;">${date.slice(5).replace('-', '/')}</span>
+                    <span style="letter-spacing:4px; color:#007bff; font-family:monospace; font-size:1.1rem;">${marks}</span>
+                    <span style="color:${doneCount===4?'#007bff':'#ccc'}; font-size:0.85rem;">${doneCount}/4</span>
+                </div>
+            `;
+        }).join('');
     }
 
     window.handleToggle = function(event, task) {
-        const isCurrentlyChecked = event.target.checked;
-        let checkedTasks = JSON.parse(localStorage.getItem('checked_tasks')) || {};
-
-        if (!isCurrentlyChecked) {
-            const confirmOff = confirm(`「${task}」をオフに戻しますか？`);
-            if (!confirmOff) {
-                event.target.checked = true;
-                return;
-            }
+        if (!event.target.checked && !confirm(`「${task}」をオフに戻しますか？`)) {
+            event.target.checked = true; return;
         }
-
-        checkedTasks[task] = isCurrentlyChecked;
+        let checkedTasks = JSON.parse(localStorage.getItem('checked_tasks')) || {};
+        checkedTasks[task] = event.target.checked;
         localStorage.setItem('checked_tasks', JSON.stringify(checkedTasks));
         renderTasks();
     };
 
     init();
 </script>
-
 </body>
 </html>
