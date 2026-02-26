@@ -7,32 +7,51 @@
     <style>
         :root {
             --bg-default: #f6f8fa;
-            --bg-active: #e7f3ff; /* オンにした時の背景色（薄い青） */
-            --toggle-on: #007bff; /* オン時のスイッチ色（青） */
+            --bg-active: #87CEEB; /* スカイブルーに変更 */
+            --toggle-on: #007bff;
             --toggle-off: #afb8c1;
         }
         
-        /* 画面全体のレイアウト：下寄せ */
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-default);
             margin: 0;
             display: flex;
             flex-direction: column;
-            justify-content: flex-end; /* 下に寄せる */
-            height: 100dvh; /* 動的な画面の高さに対応 */
-            transition: background-color 0.3s ease;
+            min-height: 100dvh;
+            transition: background-color 0.5s ease; /* 少しゆっくり色が変わるように */
         }
 
-        /* オン状態の時のボディ背景色 */
-        body.is-active {
+        /* 4つ全部チェックされた時の背景 */
+        body.is-complete {
             background-color: var(--bg-active);
         }
 
+        .memo-container {
+            padding: 15px;
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+            box-sizing: border-box;
+        }
+        #persistent-memo {
+            width: 100%;
+            height: 80px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            resize: none;
+            box-sizing: border-box;
+            background: #fff;
+        }
+
+        .spacer { flex-grow: 1; }
+
         .container { 
             background: white; 
-            padding: 24px 24px 40px 24px; /* 下側に余裕を持たせる */
-            border-radius: 24px 24px 0 0; /* 上側だけ丸める */
+            padding: 24px 24px 40px 24px;
+            border-radius: 24px 24px 0 0;
             box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
             max-width: 600px;
             margin: 0 auto;
@@ -42,54 +61,88 @@
 
         h1 { font-size: 1.4rem; margin-bottom: 4px; text-align: center; }
         .date { text-align: center; color: #656d76; margin-bottom: 24px; font-size: 0.9rem; }
-        
         .task-item { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; border-bottom: 1px solid #eee; }
         .task-item:last-child { border-bottom: none; }
         .task-label { font-size: 1.2rem; font-weight: 600; flex-grow: 1; }
 
-        /* トグルスイッチを大きく(1.4倍程度) */
         .switch { position: relative; display: inline-block; width: 60px; height: 34px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--toggle-off); transition: .3s; border-radius: 34px; }
         .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .3s; border-radius: 50%; }
-        
         input:checked + .slider { background-color: var(--toggle-on); }
         input:checked + .slider:before { transform: translateX(26px); }
+
+        .history-section {
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: #888;
+            border-top: 1px dashed #ddd;
+            padding-top: 15px;
+        }
+        .history-item { margin-bottom: 4px; }
     </style>
 </head>
 <body>
+
+<div class="memo-container">
+    <textarea id="persistent-memo" placeholder="消えないメモ欄..."></textarea>
+</div>
+
+<div class="spacer"></div>
 
 <div class="container">
     <h1 id="title">Daily Tasks</h1>
     <div id="date-display" class="date"></div>
     <div id="task-list"></div>
+    <div id="history-list" class="history-section"></div>
 </div>
 
 <script>
     const TASKS = ["シダキュア", "電気", "エアコン", "鍵"];
     const dateDisplay = document.getElementById('date-display');
     const taskListElement = document.getElementById('task-list');
+    const memoElement = document.getElementById('persistent-memo');
+    const historyElement = document.getElementById('history-list');
     const today = new Date().toLocaleDateString('sv-SE'); 
 
     function init() {
         dateDisplay.innerText = `${today.replace(/-/g, '/')}`;
+        memoElement.value = localStorage.getItem('persistent_memo') || "";
+        memoElement.addEventListener('input', (e) => {
+            localStorage.setItem('persistent_memo', e.target.value);
+        });
+
         const savedDate = localStorage.getItem('last_visit_date');
-        if (savedDate !== today) {
+        if (savedDate && savedDate !== today) {
+            saveCurrentToHistory(savedDate);
             localStorage.removeItem('checked_tasks');
-            localStorage.setItem('last_visit_date', today);
         }
+        localStorage.setItem('last_visit_date', today);
+
         renderTasks();
+        renderHistory();
+    }
+
+    function saveCurrentToHistory(date) {
+        const checkedTasks = JSON.parse(localStorage.getItem('checked_tasks')) || {};
+        const history = JSON.parse(localStorage.getItem('task_history')) || {};
+        history[date] = checkedTasks;
+        const keys = Object.keys(history).sort().reverse();
+        const filteredHistory = {};
+        keys.slice(0, 7).forEach(k => filteredHistory[k] = history[k]);
+        localStorage.setItem('task_history', JSON.stringify(filteredHistory));
     }
 
     function renderTasks() {
         const checkedTasks = JSON.parse(localStorage.getItem('checked_tasks')) || {};
         taskListElement.innerHTML = '';
-
-        let anyChecked = false;
+        
+        // 全てチェックされているか確認するためのカウンタ
+        let checkedCount = 0;
 
         TASKS.forEach(task => {
             const isChecked = checkedTasks[task] || false;
-            if (isChecked) anyChecked = true;
+            if (isChecked) checkedCount++;
 
             const item = document.createElement('div');
             item.className = 'task-item';
@@ -103,8 +156,23 @@
             taskListElement.appendChild(item);
         });
 
-        // 一つでもチェックがあれば背景色を変えるクラスを付与
-        document.body.classList.toggle('is-active', anyChecked);
+        // 全てのタスク（TASKS.length）がチェックされていたらクラスを付与
+        const isAllComplete = checkedCount === TASKS.length;
+        document.body.classList.toggle('is-complete', isAllComplete);
+    }
+
+    function renderHistory() {
+        const history = JSON.parse(localStorage.getItem('task_history')) || {};
+        const dates = Object.keys(history).sort().reverse();
+        if (dates.length === 0) return;
+
+        let html = '<div style="margin-bottom:8px; font-weight:bold;">過去の履歴</div>';
+        dates.forEach(date => {
+            const data = history[date];
+            const status = TASKS.map(t => data[t] ? '●' : '×').join(' ');
+            html += `<div class="history-item">${date.replace(/^\d{4}-/, '')}: ${status}</div>`;
+        });
+        historyElement.innerHTML = html;
     }
 
     window.handleToggle = function(event, task) {
@@ -121,7 +189,7 @@
 
         checkedTasks[task] = isCurrentlyChecked;
         localStorage.setItem('checked_tasks', JSON.stringify(checkedTasks));
-        renderTasks(); // 背景色反映のために再描画
+        renderTasks();
     };
 
     init();
