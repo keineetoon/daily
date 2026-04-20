@@ -1,0 +1,15 @@
+{
+  "name": "daily-todo",
+  "version": "1.0.0",
+  "description": "Daily task management app",
+  "main": "index.html",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "start": "http-server -p 3000"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "http-server": "^14.1.1"
+  }
+}
