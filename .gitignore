@@ -1,3 +1,10 @@
+# Test results
+test-results/
+.test-results/
+
+# Playwright
+playwright-report/
+
 # Logs
 logs
 *.log
